@@ -1,0 +1,24 @@
+{
+  "mappings": [
+    {
+      "phrase": "test",
+      "actions": [
+        {
+          "path": "/avatar/parameters/test",
+          "value": 2
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "phrase": "house",
+      "actions": [
+        {
+          "path": "/avatar/parameters/lol",
+          "value": 4
+        }
+      ],
+      "enabled": true
+    }
+  ]
+}
