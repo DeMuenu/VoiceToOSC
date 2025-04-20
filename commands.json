@@ -2,23 +2,15 @@
   "mappings": [
     {
       "phrase": "test",
-      "actions": [
-        {
-          "path": "/avatar/parameters/test",
-          "value": 2
-        }
-      ],
-      "enabled": true
+      "actions": [],
+      "enabled": true,
+      "scope": "global"
     },
     {
       "phrase": "house",
-      "actions": [
-        {
-          "path": "/avatar/parameters/lol",
-          "value": 4
-        }
-      ],
-      "enabled": true
+      "actions": [],
+      "enabled": true,
+      "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e"
     }
   ]
 }
