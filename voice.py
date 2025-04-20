@@ -13,6 +13,7 @@ class VoiceRecognizer:
         self._stop_event = threading.Event()
 
     def _listen_loop(self):
+        print("listening...")
         with self.microphone as source:
             self.recognizer.adjust_for_ambient_noise(source)
             while not self._stop_event.is_set():
