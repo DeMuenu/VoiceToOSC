@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
 
         # Start OSC listener
         self._start_osc_listener()
+        self.toggle_listening()
 
     def _build_ui(self):
         central = QWidget()

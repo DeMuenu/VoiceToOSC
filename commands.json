@@ -1,0 +1,45 @@
+{
+  "mappings": [
+    {
+      "phrase": "jacket",
+      "actions": [
+        {
+          "path": "/avatar/parameters/Clothing/Hoodie",
+          "toggle": true
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "french",
+      "actions": [
+        {
+          "path": "/avatar/parameters/VF144_MyStuff/Misc/Regis/Mustache",
+          "toggle": true
+        },
+        {
+          "path": "/avatar/parameters/VF138_MyStuff/Misc/Regis/Hat",
+          "toggle": true
+        },
+        {
+          "path": "/avatar/parameters/VF141_MyStuff/Misc/Regis/Glasses",
+          "toggle": true
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "lizard",
+      "actions": [
+        {
+          "path": "/avatar/parameters/VF102_Fursona",
+          "toggle": true
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e"
+    }
+  ]
+}
