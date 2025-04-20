@@ -174,7 +174,7 @@ class MainWindow(QMainWindow):
             for p in data.get('parameters',[]):
                 inp=p.get('input',{}); out=p.get('output',{})
                 if 'address' in inp: params.append(inp['address'])
-                if 'address' in out: params.append(out['address'])
+                #if 'address' in out: params.append(out['address'])
             self.available_params=params; self.log(f"Loaded {len(params)} params")
         except Exception as e:
             self.log(f"Auto-load failed: {e}")
@@ -256,22 +256,54 @@ class AddCommandDialog(QDialog):
         ok_cancel=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
         ok_cancel.accepted.connect(self.accept); ok_cancel.rejected.connect(self.reject)
         layout.addWidget(ok_cancel)
-    def add_action_row(self,path="",value="0"):
-        r=self.actions_table.rowCount(); self.actions_table.insertRow(r)
-        combo=QComboBox(); combo.setEditable(True); combo.addItems(self.available_params); combo.setCurrentText(path)
-        self.actions_table.setCellWidget(r,0,combo); self.actions_table.setItem(r,1,QTableWidgetItem(value))
+
+
+    def add_action_row(self, path="", value="0"):
+        r = self.actions_table.rowCount()
+        self.actions_table.insertRow(r)
+
+        combo = QComboBox()
+        combo.setEditable(True)
+        combo.addItems(self.available_params)
+
+        # Make sure path is a string (otherwise you can get a bool in here)
+        combo.setCurrentText(str(path))
+
+        self.actions_table.setCellWidget(r, 0, combo)
+        self.actions_table.setItem(r, 1, QTableWidgetItem(str(value)))
+
+
     def get_result(self):
-        phrase=self.phrase_edit.text().strip().lower()
-        scope='global' if self.global_rb.isChecked() else self.current_avatar
-        actions=[]
+        phrase = self.phrase_edit.text().strip().lower()
+        scope = 'global' if self.global_rb.isChecked() else self.current_avatar
+        actions = []
+
         for r in range(self.actions_table.rowCount()):
-            w=self.actions_table.cellWidget(r,0)
-            path=w.currentText().strip() if w else (self.actions_table.item(r,0).text().strip() if self.actions_table.item(r,0) else '')
-            val_it=self.actions_table.item(r,1)
-            vs=val_it.text().strip() if val_it else ''
-            try: v=int(vs)
-            except: 
-                try: v=float(vs)
-                except: v=0
-            if path: actions.append({'path':path,'value':v})
-        return phrase,actions,scope
+            # read the OSC path
+            w = self.actions_table.cellWidget(r, 0)
+            path = w.currentText().strip() if w else ''
+            
+            # read the value as string
+            vs = self.actions_table.item(r, 1).text().strip()
+
+            # first check for a boolean literal
+            vl = vs.lower()
+            if vl in ("true", "false"):
+                v = (vl == "true")
+
+            # then try int
+            else:
+                try:
+                    v = int(vs)
+                except ValueError:
+                    # then try float
+                    try:
+                        v = float(vs)
+                    except ValueError:
+                        # fallback
+                        v = 0
+
+            if path:
+                actions.append({'path': path, 'value': v})
+
+        return phrase, actions, scope

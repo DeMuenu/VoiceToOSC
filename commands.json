@@ -1,16 +1,15 @@
 {
   "mappings": [
     {
-      "phrase": "test",
-      "actions": [],
+      "phrase": "chair",
+      "actions": [
+        {
+          "path": "/avatar/parameters/ResChair",
+          "value": 1
+        }
+      ],
       "enabled": true,
-      "scope": "global"
-    },
-    {
-      "phrase": "house",
-      "actions": [],
-      "enabled": true,
-      "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e"
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
     }
   ]
 }
