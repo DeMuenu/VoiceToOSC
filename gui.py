@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QSpinBox, QPushButton, QListWidget, QTextEdit,
     QTableWidget, QTableWidgetItem, QComboBox, QHeaderView, QRadioButton,
-    QDialog, QDialogButtonBox, QCompleter
+    QDialog, QDialogButtonBox, QCompleter, QCheckBox
 )
 from pythonosc.dispatcher import Dispatcher
 from pythonosc import osc_server
@@ -42,6 +42,7 @@ class MainWindow(QMainWindow):
         self.available_params = []
         self.current_avatar_id = None
         self.listening = False
+        self.param_values = {}
 
         # Load settings & commands
         self._load_settings()
@@ -133,14 +134,16 @@ class MainWindow(QMainWindow):
                 self.cmd_list.addItem(CommandItem(cmd['phrase'],cmd['actions'],cmd['enabled'],cmd['scope']))
 
     def _save_commands(self):
-        data={'mappings':[]}
-        for i in range(self.cmd_list.count()):
-            it=self.cmd_list.item(i)
+        data = {'mappings': []}
+        for cmd in self.command_data:
             data['mappings'].append({
-                'phrase':it.phrase,'actions':it.actions,
-                'enabled':it.checkState()==Qt.Checked,'scope':it.scope
+                'phrase': cmd['phrase'],
+                'actions': cmd['actions'],
+                'enabled':  cmd['enabled'],
+                'scope':    cmd['scope']
             })
-        with open('commands.json','w') as f: json.dump(data,f,indent=2)
+        with open('commands.json', 'w') as f:
+            json.dump(data, f, indent=2)
 
     def _start_osc_listener(self):
         disp = Dispatcher()
@@ -148,6 +151,7 @@ class MainWindow(QMainWindow):
         disp.map('/avatar/change', self._on_avatar_change)
         # Also listen for the current avatar ID sent as /avatar/parameters/name
         disp.map('/avatar/parameters/name', self._on_avatar_loaded)
+        disp.map('/avatar/parameters/*',   self._on_param_changed)
 
         addr=('0.0.0.0',self.settings['in_port'])
         try:
@@ -156,6 +160,12 @@ class MainWindow(QMainWindow):
             self.log(f"OSC listener on port {self.settings['in_port']}")
         except Exception as e:
             self.log(f"Listener error: {e}")
+
+
+    def _on_param_changed(self, unused_addr, value):
+        # store every incoming parameter value by its OSC path
+        self.param_values[unused_addr] = value
+
 
     def _on_avatar_change(self,unused,avatar_id):
         self.current_avatar_id=avatar_id; self.log(f"Avatar change detected: {avatar_id}")
@@ -188,12 +198,14 @@ class MainWindow(QMainWindow):
             print(repr(raw[:10]))                       # dump the first few bytes
             txt = raw.decode('utf‑8-sig', errors='replace') # or try 'utf‑8‑sig'
             data = json.loads(txt)
-            params=[]
-            for p in data.get('parameters',[]):
-                inp=p.get('input',{}); out=p.get('output',{})
-                if 'address' in inp: params.append(inp['address'])
-                #if 'address' in out: params.append(out['address'])
-            self.available_params=params; self.log(f"Loaded {len(params)} params")
+            params = []
+            for p in data.get('parameters', []):
+                inp = p.get('input', {})
+                if 'address' in inp:
+            # save both address and declared type
+                    params.append({'address': inp['address'], 'type':    inp.get('type','Float')
+            })
+            self.available_params = params
         except Exception as e:
             self.log(f"Auto-load failed: {e}")
 
@@ -233,7 +245,14 @@ class MainWindow(QMainWindow):
         for cmd in self.command_data:
             if cmd['enabled'] and phrase==cmd['phrase'] and (cmd['scope']=='global' or cmd['scope']==self.current_avatar_id):
                 for act in cmd['actions']:
-                    self.osc.send(act['path'],act['value']); #self.log(f"Executed '{cmd['phrase']}': {act['path']} = {act['value']}')
+                    path = act['path']
+                    if act.get('toggle'):
+                        # invert last‑known bool (default False)
+                        cur   = bool(self.param_values.get(path, False))
+                        new_v = not cur
+                    else:
+                        new_v = act['value']
+                    self.osc.send(path, new_v)
 
     def log(self,msg):
         t=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -262,75 +281,78 @@ class AddCommandDialog(QDialog):
             else: self.global_rb.setChecked(True)
         else:
             self.avatar_rb.setEnabled(False); self.global_rb.setChecked(True)
-        self.actions_table=QTableWidget(0,2)
-        self.actions_table.setHorizontalHeaderLabels(["OSC Path","Value"])
+        self.actions_table = QTableWidget(0,3)
+        self.actions_table.setHorizontalHeaderLabels(["OSC Path","Value","Toggle?"])
         self.actions_table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
         layout.addWidget(self.actions_table)
         if actions:
-            for act in actions: self.add_action_row(act.get('path',''),str(act.get('value','0')))
+            for act in actions:
+                path   = act.get('path','')
+                # if this action was toggle‐only, there may be no 'value'
+                valstr = str(act.get('value','0')) 
+                toggl  = act.get('toggle', False)
+                self.add_action_row(path, valstr, toggl)
         btns=QHBoxLayout()
-        add_btn=QPushButton("Add Action"); add_btn.clicked.connect(self.add_action_row)
+        add_btn = QPushButton("Add Action") 
+        add_btn.clicked.connect(lambda: self.add_action_row())
         btns.addWidget(add_btn); layout.addLayout(btns)
         ok_cancel=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
         ok_cancel.accepted.connect(self.accept); ok_cancel.rejected.connect(self.reject)
         layout.addWidget(ok_cancel)
 
 
-    def add_action_row(self, path="", value="0"):
-            row = self.actions_table.rowCount()
-            self.actions_table.insertRow(row)
+    def add_action_row(self, path="", value="0", toggle=False, *_args):
+        row = self.actions_table.rowCount()
+        self.actions_table.insertRow(row)
 
-            # 1) Create an editable combo
-            combo = QComboBox()
-            combo.setEditable(True)
-            combo.setInsertPolicy(QComboBox.NoInsert)              # typing won't add new entries
-            combo.addItems(self.available_params)
-            combo.lineEdit().setPlaceholderText("Search parameters…")
+        # — OSC path combo +
+        combo = QComboBox(); combo.setEditable(True)
+        combo.addItems([p['address'] for p in self.available_params])
+        combo.setCurrentText(path)
+        # substring matcher
+        comp = QCompleter([p['address'] for p in self.available_params], combo)
+        comp.setFilterMode(Qt.MatchContains)
+        combo.setCompleter(comp)
+        self.actions_table.setCellWidget(row, 0, combo)
 
-            # 2) Hook up the completer to filter on any substring
-            completer = QCompleter(self.available_params, combo)
-            completer.setFilterMode(Qt.MatchContains)
-            completer.setCaseSensitivity(Qt.CaseInsensitive)
-            combo.setCompleter(completer)
+        # — Value field
+        val_edit = QLineEdit(value)
+        self.actions_table.setCellWidget(row, 1, val_edit)
 
-            # 3) Pre‑fill with an existing path if we’re editing
-            combo.setCurrentText(str(path))
+        # — Toggle? checkbox (only active for Bool params)
+        cb = QCheckBox()
+        # find this path’s type
+        ptype = next((p['type'] for p in self.available_params if p['address']==path), None)
+        # Option A: wrap in bool()
+        #should_enable = toggle
+        cb.setEnabled(True)
 
-            # 4) Put the combo into column 0, and the value cell into column 1
-            self.actions_table.setCellWidget(row, 0, combo)
-            self.actions_table.setItem(row, 1, QTableWidgetItem(str(value)))
+        cb.setChecked(toggle)
+
+        # disable the value field whenever toggle is on
+        val_edit.setEnabled(not toggle)
+        cb.stateChanged.connect(lambda s, ve=val_edit: ve.setEnabled(s!=Qt.Checked))
+
+        self.actions_table.setCellWidget(row, 2, cb)
 
     def get_result(self):
         phrase = self.phrase_edit.text().strip().lower()
         scope = 'global' if self.global_rb.isChecked() else self.current_avatar
+
         actions = []
-
         for r in range(self.actions_table.rowCount()):
-            # read the OSC path
-            w = self.actions_table.cellWidget(r, 0)
-            path = w.currentText().strip() if w else ''
-            
-            # read the value as string
-            vs = self.actions_table.item(r, 1).text().strip()
-
-            # first check for a boolean literal
-            vl = vs.lower()
-            if vl in ("true", "false"):
-                v = (vl == "true")
-
-            # then try int
+            path = self.actions_table.cellWidget(r,0).currentText().strip()
+            toggle = self.actions_table.cellWidget(r,2).isChecked()
+            if toggle:
+                actions.append({'path': path, 'toggle': True})
             else:
-                try:
-                    v = int(vs)
-                except ValueError:
-                    # then try float
-                    try:
-                        v = float(vs)
-                    except ValueError:
-                        # fallback
-                        v = 0
-
-            if path:
-                actions.append({'path': path, 'value': v})
-
+                vs = self.actions_table.cellWidget(r,1).text().strip().lower()
+                if vs in ("true","false"):
+                    v = (vs=="true")
+                else:
+                    try:    v = int(vs)
+                    except: 
+                        try: v = float(vs)
+                        except: v = 0
+                actions.append({'path': path, 'value': v, 'toggle': False})
         return phrase, actions, scope

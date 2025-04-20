@@ -28,7 +28,7 @@ class VoiceRecognizer:
         print("VoiceRecognizer started listening")  # notify start
         with sd.RawInputStream(
             samplerate=16000,
-            blocksize=8000,
+            blocksize=3000, #change for buffer lenght
             dtype="int16",
             channels=1,
             callback=self._audio_callback
@@ -45,8 +45,8 @@ class VoiceRecognizer:
                 else:
                     # Optionally print partial results
                     partial = json.loads(self.recognizer.PartialResult()).get("partial", "")
-                    if partial:
-                        print(f"Partial: {partial}", end="\r")  # overwrite line
+                    #if partial:
+                        #print(f"Partial: {partial}", end="\r")  # overwrite line
 
         print("VoiceRecognizer stopped listening")  # notify stop
 
