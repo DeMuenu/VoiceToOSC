@@ -166,7 +166,10 @@ class MainWindow(QMainWindow):
             if not os.path.isfile(cfg): raise FileNotFoundError(cfg)
             txt=open(cfg).read().strip()
             if not txt: raise ValueError("Empty file")
-            data=json.loads(txt)
+            raw = open(cfg, 'rb').read()               # read as bytes
+            print(repr(raw[:10]))                       # dump the first few bytes
+            txt = raw.decode('utf‑8-sig', errors='replace') # or try 'utf‑8‑sig'
+            data = json.loads(txt)
             params=[]
             for p in data.get('parameters',[]):
                 inp=p.get('input',{}); out=p.get('output',{})
