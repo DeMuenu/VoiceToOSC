@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QSpinBox, QPushButton, QListWidget, QTextEdit,
     QTableWidget, QTableWidgetItem, QComboBox, QHeaderView, QRadioButton,
-    QDialog, QDialogButtonBox
+    QDialog, QDialogButtonBox, QCompleter
 )
 from pythonosc.dispatcher import Dispatcher
 from pythonosc import osc_server
@@ -143,7 +143,12 @@ class MainWindow(QMainWindow):
         with open('commands.json','w') as f: json.dump(data,f,indent=2)
 
     def _start_osc_listener(self):
-        disp=Dispatcher(); disp.map('/avatar/change',self._on_avatar_change)
+        disp = Dispatcher()
+        # Already listen for explicit avatar‑change messages:
+        disp.map('/avatar/change', self._on_avatar_change)
+        # Also listen for the current avatar ID sent as /avatar/parameters/name
+        disp.map('/avatar/parameters/name', self._on_avatar_loaded)
+
         addr=('0.0.0.0',self.settings['in_port'])
         try:
             server=osc_server.ThreadingOSCUDPServer(addr,disp)
@@ -155,6 +160,19 @@ class MainWindow(QMainWindow):
     def _on_avatar_change(self,unused,avatar_id):
         self.current_avatar_id=avatar_id; self.log(f"Avatar change detected: {avatar_id}")
         self._auto_load_avatar_config(avatar_id); self._populate_cmd_list()
+
+    def _on_avatar_loaded(self, unused_addr, avatar_id_str):
+
+        # Store the avatar ID
+        self.current_avatar_id = avatar_id_str
+        self.log(f"Avatar loaded via OSC param: {avatar_id_str}")
+
+        # Load its OSC config (populates self.available_params)
+        self._auto_load_avatar_config(avatar_id_str)
+
+        # Refresh the command list to show any avatar‑specific commands
+        self._populate_cmd_list()
+
 
     def _auto_load_avatar_config(self,avatar_id):
         root=os.path.join(os.path.expanduser('~'),'AppData','LocalLow','VRChat','VRChat','OSC')
@@ -259,18 +277,27 @@ class AddCommandDialog(QDialog):
 
 
     def add_action_row(self, path="", value="0"):
-        r = self.actions_table.rowCount()
-        self.actions_table.insertRow(r)
+        # 1) Create a new row in the table
+        row = self.actions_table.rowCount()
+        self.actions_table.insertRow(row)
 
+        # 2) Make the combo box for selecting an OSC parameter
         combo = QComboBox()
         combo.setEditable(True)
         combo.addItems(self.available_params)
 
-        # Make sure path is a string (otherwise you can get a bool in here)
+        # 3) Hook up a QCompleter so typing filters the list
+        completer = QCompleter(self.available_params, combo)
+        completer.setFilterMode(Qt.MatchContains)         # match anywhere in the string
+        completer.setCaseSensitivity(Qt.CaseInsensitive)  # ignore capitalization
+        combo.setCompleter(completer)
+
+        # 4) If we're editing an existing action, show its path
         combo.setCurrentText(str(path))
 
-        self.actions_table.setCellWidget(r, 0, combo)
-        self.actions_table.setItem(r, 1, QTableWidgetItem(str(value)))
+        # 5) Put the combo into column 0, and the value cell into column 1
+        self.actions_table.setCellWidget(row, 0, combo)
+        self.actions_table.setItem(row, 1, QTableWidgetItem(str(value)))
 
 
     def get_result(self):
