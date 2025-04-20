@@ -1,4 +1,5 @@
 PyQt5>=5.15
 python-osc>=1.7
-SpeechRecognition>=3.8
+vosk
 PyAudio
+sounddevice

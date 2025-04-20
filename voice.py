@@ -1,32 +1,54 @@
 # voice.py
 import threading
-import speech_recognition as sr
+import queue
+import json
+import sys
+
+import sounddevice as sd
+from vosk import Model, KaldiRecognizer
 
 class VoiceRecognizer:
-    def __init__(self, callback):
+    def __init__(self, callback, model_path="models/vosk-model-small-en-us-0.15"):
         """
         callback(phrase: str)
         """
-        self.recognizer = sr.Recognizer()
-        self.microphone = sr.Microphone()
         self.callback = callback
+        self.q = queue.Queue()
+        self.model = Model(model_path)
+        self.recognizer = KaldiRecognizer(self.model, 16000)
         self._stop_event = threading.Event()
 
+    def _audio_callback(self, indata, frames, time, status):
+        if status:
+            # Print any audio stream warnings to stderr
+            print(f"Audio status: {status}", file=sys.stderr)
+        self.q.put(bytes(indata))
+
     def _listen_loop(self):
-        print("listening...")
-        with self.microphone as source:
-            self.recognizer.adjust_for_ambient_noise(source)
+        print("VoiceRecognizer started listening")  # notify start
+        with sd.RawInputStream(
+            samplerate=16000,
+            blocksize=8000,
+            dtype="int16",
+            channels=1,
+            callback=self._audio_callback
+        ):
             while not self._stop_event.is_set():
-                try:
-                    audio = self.recognizer.listen(source, timeout=1)
-                    phrase = self.recognizer.recognize_google(audio)
-                    self.callback(phrase.lower())
-                except sr.WaitTimeoutError:
-                    continue
-                except sr.UnknownValueError:
-                    continue
-                except Exception as e:
-                    print(f"Voice error: {e}")
+                data = self.q.get()
+                if self.recognizer.AcceptWaveform(data):
+                    result = json.loads(self.recognizer.Result())
+                    text = result.get("text", "").strip()
+                    if text:
+                        # Print the recognized text to the console
+                        print(f"Recognized: {text}")  # print to stdout
+                        self.callback(text)
+                else:
+                    # Optionally print partial results
+                    partial = json.loads(self.recognizer.PartialResult()).get("partial", "")
+                    if partial:
+                        print(f"Partial: {partial}", end="\r")  # overwrite line
+
+        print("VoiceRecognizer stopped listening")  # notify stop
 
     def start(self):
         self._stop_event.clear()
@@ -36,3 +58,4 @@ class VoiceRecognizer:
     def stop(self):
         self._stop_event.set()
         self.thread.join()
+        print("VoiceRecognizer thread joined")  # final join message
