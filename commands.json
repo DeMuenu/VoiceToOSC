@@ -10,6 +10,44 @@
       ],
       "enabled": true,
       "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "french",
+      "actions": [
+        {
+          "path": "/avatar/parameters/VF141_MyStuff/Misc/Regis/Glasses",
+          "value": 1
+        },
+        {
+          "path": "/avatar/parameters/VF138_MyStuff/Misc/Regis/Hat",
+          "value": 1
+        },
+        {
+          "path": "/avatar/parameters/VF144_MyStuff/Misc/Regis/Mustache",
+          "value": 1
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "swiss",
+      "actions": [
+        {
+          "path": "/avatar/parameters/VF141_MyStuff/Misc/Regis/Glasses",
+          "value": 0
+        },
+        {
+          "path": "/avatar/parameters/VF138_MyStuff/Misc/Regis/Hat",
+          "value": 0
+        },
+        {
+          "path": "/avatar/parameters/VF144_MyStuff/Misc/Regis/Mustache",
+          "value": 0
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
     }
   ]
 }

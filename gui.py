@@ -277,28 +277,28 @@ class AddCommandDialog(QDialog):
 
 
     def add_action_row(self, path="", value="0"):
-        # 1) Create a new row in the table
-        row = self.actions_table.rowCount()
-        self.actions_table.insertRow(row)
+            row = self.actions_table.rowCount()
+            self.actions_table.insertRow(row)
 
-        # 2) Make the combo box for selecting an OSC parameter
-        combo = QComboBox()
-        combo.setEditable(True)
-        combo.addItems(self.available_params)
+            # 1) Create an editable combo
+            combo = QComboBox()
+            combo.setEditable(True)
+            combo.setInsertPolicy(QComboBox.NoInsert)              # typing won't add new entries
+            combo.addItems(self.available_params)
+            combo.lineEdit().setPlaceholderText("Search parameters…")
 
-        # 3) Hook up a QCompleter so typing filters the list
-        completer = QCompleter(self.available_params, combo)
-        completer.setFilterMode(Qt.MatchContains)         # match anywhere in the string
-        completer.setCaseSensitivity(Qt.CaseInsensitive)  # ignore capitalization
-        combo.setCompleter(completer)
+            # 2) Hook up the completer to filter on any substring
+            completer = QCompleter(self.available_params, combo)
+            completer.setFilterMode(Qt.MatchContains)
+            completer.setCaseSensitivity(Qt.CaseInsensitive)
+            combo.setCompleter(completer)
 
-        # 4) If we're editing an existing action, show its path
-        combo.setCurrentText(str(path))
+            # 3) Pre‑fill with an existing path if we’re editing
+            combo.setCurrentText(str(path))
 
-        # 5) Put the combo into column 0, and the value cell into column 1
-        self.actions_table.setCellWidget(row, 0, combo)
-        self.actions_table.setItem(row, 1, QTableWidgetItem(str(value)))
-
+            # 4) Put the combo into column 0, and the value cell into column 1
+            self.actions_table.setCellWidget(row, 0, combo)
+            self.actions_table.setItem(row, 1, QTableWidgetItem(str(value)))
 
     def get_result(self):
         phrase = self.phrase_edit.text().strip().lower()
