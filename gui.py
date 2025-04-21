@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QComboBox, QHeaderView, QRadioButton,
     QDialog, QDialogButtonBox, QCompleter, QCheckBox
 )
+from PyQt5.QtGui import QFont
 from pythonosc.dispatcher import Dispatcher
 from pythonosc import osc_server
 from osc_sender import OSCSender
@@ -28,7 +29,7 @@ class CommandItem(QtWidgets.QListWidgetItem):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("VRChat OSC Voice Controller")
+        self.setWindowTitle("VRChat VoiceToOSC")
         self.resize(700, 600)
         self.setStyleSheet("""
             QWidget { background-color: #000; color: #fff; }
@@ -49,6 +50,7 @@ class MainWindow(QMainWindow):
         self._load_commands()
 
         # Build UI
+
         self._build_ui()
 
         # OSC sender & voice
@@ -58,6 +60,7 @@ class MainWindow(QMainWindow):
         # Start OSC listener
         self._start_osc_listener()
         self.toggle_listening()
+
 
     def _build_ui(self):
         central = QWidget()
@@ -79,6 +82,17 @@ class MainWindow(QMainWindow):
         form.addRow(btns)
         layout.addLayout(form)
 
+        #Warning
+        
+        self.Warning_label = QLabel("Waiting for an Avatar to load...")
+        # Style the background
+        layout.addWidget(self.Warning_label)
+        font = QFont()
+        font.setPointSize(20)            # 20 pt font
+        font.setBold(True)  
+        self.Warning_label.setStyleSheet("background-color: yellow; color: black;")
+        self.Warning_label.setFont(font)
+
         # Commands list
         self.cmd_list = QListWidget(); self.cmd_list.itemChanged.connect(self._on_item_toggled)
         layout.addWidget(self.cmd_list)
@@ -96,6 +110,17 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Log:"))
         self.log_widget = QTextEdit(); self.log_widget.setReadOnly(True); self.log_widget.setFixedHeight(160)
         layout.addWidget(self.log_widget)
+
+
+    def remove_Warning(self):
+        if self.Warning_label is not None:
+            layout = self.centralWidget().layout()
+            # Remove it from the layout...
+            layout.removeWidget(self.Warning_label)
+            # ...schedule it for deletion...
+            self.Warning_label.deleteLater()
+            # ...and clear our reference
+            self.Warning_label = None
 
     def toggle_listening(self):
         if self.listening:
@@ -207,6 +232,7 @@ class MainWindow(QMainWindow):
                     params.append({'address': inp['address'], 'type':    inp.get('type','Float')
             })
             self.available_params = params
+            self.remove_Warning()
         except Exception as e:
             self.log(f"Auto-load failed: {e}")
 

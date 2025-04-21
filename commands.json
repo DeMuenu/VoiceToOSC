@@ -40,6 +40,96 @@
       ],
       "enabled": true,
       "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e"
+    },
+    {
+      "phrase": "headset",
+      "actions": [
+        {
+          "path": "/avatar/parameters/VF103_Quest",
+          "toggle": true
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e"
+    },
+    {
+      "phrase": "shark",
+      "actions": [
+        {
+          "path": "/avatar/parameters/VF135_MyStuff/Misc/Blahaj",
+          "toggle": true
+        },
+        {
+          "path": "/avatar/parameters/VF132_MyStuff/Misc/Panda",
+          "value": 0,
+          "toggle": false
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "panda",
+      "actions": [
+        {
+          "path": "/avatar/parameters/VF135_MyStuff/Misc/Blahaj",
+          "value": 0,
+          "toggle": false
+        },
+        {
+          "path": "/avatar/parameters/VF132_MyStuff/Misc/Panda",
+          "toggle": true
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "me pink",
+      "actions": [
+        {
+          "path": "/avatar/parameters/Stylization/Hues/Main",
+          "value": 0.08,
+          "toggle": false
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "me orange",
+      "actions": [
+        {
+          "path": "/avatar/parameters/Stylization/Hues/Main",
+          "value": 0.42,
+          "toggle": false
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "me green",
+      "actions": [
+        {
+          "path": "/avatar/parameters/Stylization/Hues/Main",
+          "value": 0.75,
+          "toggle": false
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+    },
+    {
+      "phrase": "me gay",
+      "actions": [
+        {
+          "path": "/avatar/parameters/Stylization/Rainbow",
+          "toggle": true
+        }
+      ],
+      "enabled": true,
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
     }
   ]
 }
