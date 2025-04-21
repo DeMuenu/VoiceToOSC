@@ -1,1 +1,4 @@
 __pycache__/voice.cpython-312.pyc
+/build
+/dist
+/__pycache__
