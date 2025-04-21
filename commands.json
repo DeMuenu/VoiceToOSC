@@ -47,6 +47,11 @@
         {
           "path": "/avatar/parameters/VF103_Quest",
           "toggle": true
+        },
+        {
+          "path": "/avatar/parameters/VF102_Fursona",
+          "value": 0,
+          "toggle": false
         }
       ],
       "enabled": true,
@@ -121,15 +126,15 @@
       "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
     },
     {
-      "phrase": "me gay",
+      "phrase": "googly eyes",
       "actions": [
         {
-          "path": "/avatar/parameters/Stylization/Rainbow",
+          "path": "/avatar/parameters/VF61_Eyes",
           "toggle": true
         }
       ],
       "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+      "scope": "avtr_806a9245-9c02-4ca9-a7ae-b2b4d58427bd"
     }
   ]
 }

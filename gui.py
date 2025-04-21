@@ -16,6 +16,7 @@ from pythonosc.dispatcher import Dispatcher
 from pythonosc import osc_server
 from osc_sender import OSCSender
 from voice import VoiceRecognizer
+import sounddevice as sd
 
 class CommandItem(QtWidgets.QListWidgetItem):
     def __init__(self, phrase, actions, enabled=True, scope='global'):
@@ -30,7 +31,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("VRChat VoiceToOSC")
-        self.resize(700, 600)
+        self.resize(1000, 700)
         self.setStyleSheet("""
             QWidget { background-color: #000; color: #fff; }
             QLineEdit, QSpinBox, QListWidget, QTextEdit, QTableWidget { background-color: #111; color: #fff; }
@@ -55,7 +56,7 @@ class MainWindow(QMainWindow):
 
         # OSC sender & voice
         self.osc = OSCSender(self.settings['host'], self.settings['out_port'])
-        self.voice = VoiceRecognizer(self.on_phrase_detected)
+        self.voice = VoiceRecognizer(self.on_phrase_detected, model_path=self.settings['model_path'], device=self.settings.get('device'))
 
         # Start OSC listener
         self._start_osc_listener()
@@ -76,11 +77,37 @@ class MainWindow(QMainWindow):
         form.addRow("Outgoing Port:", self.out_port_edit)
         form.addRow("Incoming Port:", self.in_port_edit)
         btns = QHBoxLayout()
+
+
+        #model selection
+        self.model_box = QComboBox()
+        # Populate with any sub‑folders in ./models/
+        for name in sorted(os.listdir('models')):
+            full = os.path.join('models', name)
+            if os.path.isdir(full):
+                self.model_box.addItem(name, full)
+        # select saved path
+        saved = self.settings['model_path']
+        idx = self.model_box.findData(saved)
+        if idx >= 0:
+            self.model_box.setCurrentIndex(idx)
+        form.addRow("Vosk Model:", self.model_box)
+
+
+        self.device_box = QComboBox()
+        self._refresh_device_list()
+        form.addRow("Input Device:", self.device_box)
         save_btn = QPushButton("Save Settings"); save_btn.clicked.connect(self.save_settings)
         self.toggle_btn = QPushButton("Start Listening"); self.toggle_btn.clicked.connect(self.toggle_listening)
         btns.addWidget(save_btn); btns.addWidget(self.toggle_btn)
         form.addRow(btns)
+        
+
+
+
+
         layout.addLayout(form)
+
 
         #Warning
         
@@ -122,6 +149,22 @@ class MainWindow(QMainWindow):
             # ...and clear our reference
             self.Warning_label = None
 
+    
+    def _refresh_device_list(self):
+        self.device_box.clear()
+        devices = sd.query_devices()
+        # show only inputs
+        inputs = [(i, d['name']) for i, d in enumerate(devices) if d['max_input_channels'] > 0]
+        for idx, name in inputs:
+            self.device_box.addItem(f"{idx}: {name}", idx)
+        # select saved
+        saved = self.settings.get('device')
+        if saved is not None and 0 <= saved < len(devices):
+            for i in range(self.device_box.count()):
+                if self.device_box.itemData(i) == saved:
+                    self.device_box.setCurrentIndex(i)
+                    break
+
     def toggle_listening(self):
         if self.listening:
             self.voice.stop(); self.listening=False; self.toggle_btn.setText("Start Listening"); self.log("Voice listening stopped")
@@ -134,12 +177,21 @@ class MainWindow(QMainWindow):
         except: self.settings={'host':'127.0.0.1','out_port':9000,'in_port':9001}
         self.settings.setdefault('out_port',self.settings.get('port',9000))
         self.settings.setdefault('in_port',9001)
+        self.settings.setdefault('model_path', 'models/vosk-model-small-en-us-0.15')
 
     def save_settings(self):
-        self.settings['host']=self.host_edit.text(); self.settings['out_port']=self.out_port_edit.value(); self.settings['in_port']=self.in_port_edit.value()
+        self.settings['host']=self.host_edit.text(); self.settings['out_port']=self.out_port_edit.value(); self.settings['in_port']=self.in_port_edit.value(); self.settings['device'] = self.device_box.currentData(); self.settings['model_path'] = self.model_box.currentData() 
         with open('settings.json','w') as f: json.dump(self.settings,f,indent=2)
         self.osc=OSCSender(self.settings['host'],self.settings['out_port'])
         self.log(f"Settings saved: out {self.settings['host']}:{self.settings['out_port']}, in {self.settings['in_port']}")
+        
+        if self.listening:
+            self.voice.stop()
+        self.voice = VoiceRecognizer(self.on_phrase_detected, model_path=self.settings['model_path'], device=self.settings['device'])
+        if self.listening:
+            self.voice.start()
+
+
         QtWidgets.QMessageBox.information(self,'Saved','Settings updated.')
 
     def _load_commands(self):
@@ -272,12 +324,14 @@ class MainWindow(QMainWindow):
         for cmd in self.command_data:
             if cmd['enabled'] and phrase==cmd['phrase'] and (cmd['scope']=='global' or cmd['scope']==self.current_avatar_id):
                 for act in cmd['actions']:
+                    if (act['path'] == ""): continue
                     path = act['path']
                     if act.get('toggle'):
                         # invert last‑known bool (default False)
                         cur   = bool(self.param_values.get(path, False))
                         new_v = not cur
                     else:
+                        if (act['value'] == ""): continue
                         new_v = act['value']
                     self.osc.send(path, new_v)
 
@@ -338,6 +392,7 @@ class AddCommandDialog(QDialog):
         combo.setCurrentText(path)
         # substring matcher
         comp = QCompleter([p['address'] for p in self.available_params], combo)
+        comp.setCaseSensitivity(Qt.CaseInsensitive)
         comp.setFilterMode(Qt.MatchContains)
         combo.setCompleter(comp)
         self.actions_table.setCellWidget(row, 0, combo)

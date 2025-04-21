@@ -3,20 +3,30 @@ import threading
 import queue
 import json
 import sys
-
+import os
 import sounddevice as sd
 from vosk import Model, KaldiRecognizer
 
 class VoiceRecognizer:
-    def __init__(self, callback, model_path="models/vosk-model-small-en-us-0.15"):
+    def __init__(self, callback, model_path="models/vosk-model-small-en-us-0.15", device=None):
         """
         callback(phrase: str)
         """
+        if not os.path.isdir(str(model_path)):
+            print(
+                f"Vosk model directory not found at '{model_path}'. "
+                "Please download models from: https://alphacephei.com/vosk/models and extract to models/...  Defaulting to models/vosk-model-small-en-us-0.15"
+            )
+            model_path = "models/vosk-model-small-en-us-0.15"
+        print(model_path)
+
+
         self.callback = callback
         self.q = queue.Queue()
         self.model = Model(model_path)
         self.recognizer = KaldiRecognizer(self.model, 16000)
         self._stop_event = threading.Event()
+        self.device = device
 
     def _audio_callback(self, indata, frames, time, status):
         if status:
@@ -29,6 +39,7 @@ class VoiceRecognizer:
         with sd.RawInputStream(
             samplerate=16000,
             blocksize=3000, #change for buffer lenght
+            device=self.device,
             dtype="int16",
             channels=1,
             callback=self._audio_callback
