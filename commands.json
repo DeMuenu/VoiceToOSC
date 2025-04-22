@@ -1,37 +1,19 @@
 {
   "mappings": [
     {
-      "phrase": "jacket",
-      "actions": [
-        {
-          "path": "/avatar/parameters/Clothing/Hoodie",
-          "toggle": true
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
-    },
-    {
-      "phrase": "french",
+      "phrase": "test/final beard",
       "actions": [
         {
           "path": "/avatar/parameters/VF144_MyStuff/Misc/Regis/Mustache",
           "toggle": true
-        },
-        {
-          "path": "/avatar/parameters/VF138_MyStuff/Misc/Regis/Hat",
-          "toggle": true
-        },
-        {
-          "path": "/avatar/parameters/VF141_MyStuff/Misc/Regis/Glasses",
-          "toggle": true
         }
       ],
       "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
+      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7",
+      "in_sentence": true
     },
     {
-      "phrase": "lizard",
+      "phrase": "be/wish lizard",
       "actions": [
         {
           "path": "/avatar/parameters/VF102_Fursona",
@@ -39,102 +21,8 @@
         }
       ],
       "enabled": true,
-      "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e"
-    },
-    {
-      "phrase": "headset",
-      "actions": [
-        {
-          "path": "/avatar/parameters/VF103_Quest",
-          "toggle": true
-        },
-        {
-          "path": "/avatar/parameters/VF102_Fursona",
-          "value": 0,
-          "toggle": false
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e"
-    },
-    {
-      "phrase": "shark",
-      "actions": [
-        {
-          "path": "/avatar/parameters/VF135_MyStuff/Misc/Blahaj",
-          "toggle": true
-        },
-        {
-          "path": "/avatar/parameters/VF132_MyStuff/Misc/Panda",
-          "value": 0,
-          "toggle": false
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
-    },
-    {
-      "phrase": "panda",
-      "actions": [
-        {
-          "path": "/avatar/parameters/VF135_MyStuff/Misc/Blahaj",
-          "value": 0,
-          "toggle": false
-        },
-        {
-          "path": "/avatar/parameters/VF132_MyStuff/Misc/Panda",
-          "toggle": true
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
-    },
-    {
-      "phrase": "me pink",
-      "actions": [
-        {
-          "path": "/avatar/parameters/Stylization/Hues/Main",
-          "value": 0.08,
-          "toggle": false
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
-    },
-    {
-      "phrase": "me orange",
-      "actions": [
-        {
-          "path": "/avatar/parameters/Stylization/Hues/Main",
-          "value": 0.42,
-          "toggle": false
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
-    },
-    {
-      "phrase": "me green",
-      "actions": [
-        {
-          "path": "/avatar/parameters/Stylization/Hues/Main",
-          "value": 0.75,
-          "toggle": false
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_1cd00a05-d02b-461e-b7bf-cb53e54279d7"
-    },
-    {
-      "phrase": "googly eyes",
-      "actions": [
-        {
-          "path": "/avatar/parameters/VF61_Eyes",
-          "toggle": true
-        }
-      ],
-      "enabled": true,
-      "scope": "avtr_806a9245-9c02-4ca9-a7ae-b2b4d58427bd"
+      "scope": "avtr_aac211d3-1cef-4b69-a741-de310cdf0a6e",
+      "in_sentence": true
     }
   ]
 }

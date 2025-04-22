@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QSpinBox, QPushButton, QListWidget, QTextEdit,
     QTableWidget, QTableWidgetItem, QComboBox, QHeaderView, QRadioButton,
-    QDialog, QDialogButtonBox, QCompleter, QCheckBox
+    QDialog, QDialogButtonBox, QCompleter, QCheckBox, QListWidgetItem
 )
 from PyQt5.QtGui import QFont
 from pythonosc.dispatcher import Dispatcher
@@ -28,8 +28,13 @@ class CommandItem(QtWidgets.QListWidgetItem):
         self.setCheckState(Qt.Checked if enabled else Qt.Unchecked)
 
 class MainWindow(QMainWindow):
+    avatarChanged = pyqtSignal(str)
+    avatarLoaded  = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
+        self.avatarChanged.connect(self._on_avatar_change_main)
+        self.avatarLoaded .connect(self._on_avatar_loaded_main)
         self.setWindowTitle("VRChat VoiceToOSC")
         self.resize(1000, 700)
         self.setStyleSheet("""
@@ -62,6 +67,12 @@ class MainWindow(QMainWindow):
         self._start_osc_listener()
         self.toggle_listening()
 
+
+    def _emit_avatar_changed(self, addr, avatar_id):
+        self.avatarChanged.emit(avatar_id)
+
+    def _emit_avatar_loaded(self, addr, avatar_id_str):
+        self.avatarLoaded.emit(avatar_id_str)
 
     def _build_ui(self):
         central = QWidget()
@@ -121,7 +132,7 @@ class MainWindow(QMainWindow):
         self.Warning_label.setFont(font)
 
         # Commands list
-        self.cmd_list = QListWidget(); self.cmd_list.itemChanged.connect(self._on_item_toggled)
+        self.cmd_list = QListWidget()
         layout.addWidget(self.cmd_list)
         self._populate_cmd_list()
 
@@ -202,14 +213,18 @@ class MainWindow(QMainWindow):
             'phrase':m.get('phrase',''),
             'actions':m.get('actions',[]),
             'enabled':m.get('enabled',True),
-            'scope':m.get('scope','global')
+            'scope':m.get('scope','global'),
+            'in_sentence': m.get('in_sentence', False)
         } for m in raw.get('mappings',[])]
 
     def _populate_cmd_list(self):
         self.cmd_list.clear()
         for cmd in self.command_data:
             if cmd['scope']=='global' or cmd['scope']==self.current_avatar_id:
-                self.cmd_list.addItem(CommandItem(cmd['phrase'],cmd['actions'],cmd['enabled'],cmd['scope']))
+                item = QListWidgetItem(self.cmd_list)
+                widget = CommandListItemWidget(cmd, main_win=self, parent=self.cmd_list)
+                item.setSizeHint(widget.sizeHint())
+                self.cmd_list.setItemWidget(item, widget)
 
     def _save_commands(self):
         data = {'mappings': []}
@@ -218,17 +233,18 @@ class MainWindow(QMainWindow):
                 'phrase': cmd['phrase'],
                 'actions': cmd['actions'],
                 'enabled':  cmd['enabled'],
-                'scope':    cmd['scope']
+                'scope':    cmd['scope'],
+                'in_sentence': cmd['in_sentence']
             })
         with open('commands.json', 'w') as f:
             json.dump(data, f, indent=2)
 
+    
+
     def _start_osc_listener(self):
         disp = Dispatcher()
-        # Already listen for explicit avatar‑change messages:
-        disp.map('/avatar/change', self._on_avatar_change)
-        # Also listen for the current avatar ID sent as /avatar/parameters/name
-        disp.map('/avatar/parameters/name', self._on_avatar_loaded)
+        disp.map('/avatar/change', self._emit_avatar_changed)
+        disp.map('/avatar/parameters/name', self._emit_avatar_loaded)
         disp.map('/avatar/parameters/*',   self._on_param_changed)
 
         addr=('0.0.0.0',self.settings['in_port'])
@@ -262,6 +278,20 @@ class MainWindow(QMainWindow):
         self._populate_cmd_list()
 
 
+    @pyqtSlot(str)
+    def _on_avatar_change_main(self, avatar_id):
+        self.current_avatar_id = avatar_id
+        self.log(f"Avatar change detected: {avatar_id}")
+        self._auto_load_avatar_config(avatar_id)
+        self._populate_cmd_list()
+
+    @pyqtSlot(str)
+    def _on_avatar_loaded_main(self, avatar_id_str):
+        self.current_avatar_id = avatar_id_str
+        self.log(f"Avatar loaded via OSC param: {avatar_id_str}")
+        self._auto_load_avatar_config(avatar_id_str)
+        self._populate_cmd_list()
+
     def _auto_load_avatar_config(self,avatar_id):
         root=os.path.join(os.path.expanduser('~'),'AppData','LocalLow','VRChat','VRChat','OSC')
         try:
@@ -291,21 +321,41 @@ class MainWindow(QMainWindow):
     def add_command(self):
         dlg=AddCommandDialog(self,available_params=self.available_params,current_avatar=self.current_avatar_id)
         if dlg.exec_():
-            phrase,acts,scope=dlg.get_result();
-            self.command_data.append({'phrase':phrase,'actions':acts,'enabled':True,'scope':scope})
-            self._populate_cmd_list(); self._save_commands()
+            phrase, acts, scope = dlg.get_result()
+            self.command_data.append({
+            'phrase':       phrase,
+            'actions':      acts,
+            'enabled':      True,
+            'scope':        scope,
+            'in_sentence':  False
+            })
+            self._populate_cmd_list()
+            self._save_commands()
 
     def edit_command(self):
-        sel=self.cmd_list.selectedItems()
-        if not sel: return
-        it=sel[0]
-        dlg=AddCommandDialog(self,phrase=it.phrase,actions=it.actions,available_params=self.available_params,current_avatar=self.current_avatar_id,initial_scope=it.scope)
+        sel = self.cmd_list.selectedItems()
+        if not sel:
+            return
+        item   = sel[0]
+        widget = self.cmd_list.itemWidget(item)
+        cmd    = widget.cmd
+        dlg = AddCommandDialog(
+            self,
+            phrase=cmd['phrase'],
+            actions=cmd['actions'],
+            available_params=self.available_params,
+            current_avatar=self.current_avatar_id,
+            initial_scope=cmd['scope']
+        )
         if dlg.exec_():
-            phrase,acts,scope=dlg.get_result()
-            for cmd in self.command_data:
-                if cmd['phrase']==it.phrase and cmd['scope']==it.scope:
-                    cmd.update({'phrase':phrase,'actions':acts,'scope':scope}); break
-            self._populate_cmd_list(); self._save_commands()
+            new_phrase, new_actions, new_scope = dlg.get_result()
+            cmd['phrase']  = new_phrase
+            cmd['actions'] = new_actions
+            cmd['scope']   = new_scope
+
+            # refresh the list so labels and scopes update
+            self._populate_cmd_list()
+            self._save_commands()
 
     def delete_command(self):
         sel=self.cmd_list.selectedItems()
@@ -320,20 +370,67 @@ class MainWindow(QMainWindow):
         self.log(f"Command '{it.phrase}' {'enabled' if it.checkState()==Qt.Checked else 'disabled'}")
         self._save_commands()
 
+    def _set_in_sentence(self, cmd, checked):
+        cmd['in_sentence'] = bool(checked == Qt.Checked)
+        self.log(f"InSentence for '{cmd['phrase']}' set to {cmd['in_sentence']}")
+        self._save_commands()
+
+
+    def _match_execution_criteria(self, phrase_F, cmd_phrase, in_sentence):
+        self.log("got sentence with: " + phrase_F + cmd_phrase)
+        if(not in_sentence):
+            if "/" in cmd_phrase:
+                cmd_single = cmd_phrase.split("/")
+                for cmd_single_word in cmd_single:
+                    self.log("Check1.5: " + cmd_single_word + " == " + phrase_F)
+                    if cmd_single_word == phrase_F:
+                        self.log("Matches sentence")
+                        return True
+            else:
+                self.log("Check1: " + phrase_F + " == " + cmd_phrase)
+                if phrase_F == cmd_phrase:
+                    self.log("Matches sentence")
+                    return True
+        else:
+            match_count = 0
+            phrase_words = phrase_F.split(" ")
+            cmd_words = cmd_phrase.split(" ")
+            for word in phrase_words:
+                for cmds in cmd_words:
+                    if "/" in cmds:
+                        cmd_single = cmds.split("/")
+                        for cmd_single_word in cmd_single:
+                            self.log("Check2: " + cmd_single_word + " == " + word)
+                            if cmd_single_word == word:
+                                match_count += 1
+                                break
+                    else:
+                        self.log("Check3: " + cmds + " == " + word)
+                        if cmds == word:
+                            match_count += 1
+            if match_count >= len(cmd_words):
+                self.log("Matches sentence")
+                return True
+            else:
+                self.log("Doesn't match sentence")
+                return False
+
     def on_phrase_detected(self,phrase):
         for cmd in self.command_data:
-            if cmd['enabled'] and phrase==cmd['phrase'] and (cmd['scope']=='global' or cmd['scope']==self.current_avatar_id):
-                for act in cmd['actions']:
-                    if (act['path'] == ""): continue
-                    path = act['path']
-                    if act.get('toggle'):
-                        # invert last‑known bool (default False)
-                        cur   = bool(self.param_values.get(path, False))
-                        new_v = not cur
-                    else:
-                        if (act['value'] == ""): continue
-                        new_v = act['value']
-                    self.osc.send(path, new_v)
+            
+            if cmd['enabled'] and (cmd['scope']=='global' or cmd['scope']==self.current_avatar_id):
+                if self._match_execution_criteria(phrase, cmd['phrase'], cmd['in_sentence']):
+                    for act in cmd['actions']:
+                        if (act['path'] == ""): continue
+                        path = act['path']
+                        if act.get('toggle'):
+                            # invert last‑known bool (default False)
+                            cur   = bool(self.param_values.get(path, False))
+                            new_v = not cur
+                        else:
+                            if (act['value'] == ""): continue
+                            new_v = act['value']
+                        self.osc.send(path, new_v)
 
     def log(self,msg):
         t=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -438,3 +535,37 @@ class AddCommandDialog(QDialog):
                         except: v = 0
                 actions.append({'path': path, 'value': v, 'toggle': False})
         return phrase, actions, scope
+
+
+class CommandListItemWidget(QWidget):
+    def __init__(self, cmd, main_win, parent=None):
+        super().__init__(parent)
+        self.cmd = cmd
+        self.main = main_win
+
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0,0,0,0)
+
+        # enabled checkbox
+        self.en_cb = QCheckBox()
+        self.en_cb.setChecked(cmd['enabled'])
+        self.en_cb.stateChanged.connect(self._toggle_enabled)
+        lay.addWidget(self.en_cb)
+
+        # phrase label
+        lbl = QLabel(cmd['phrase'])
+        lay.addWidget(lbl, stretch=1)
+
+        # in‑sentence checkbox
+        self.ins_cb = QCheckBox("InSentence")
+        self.ins_cb.setChecked(cmd['in_sentence'])
+        self.ins_cb.stateChanged.connect(self._toggle_in_sentence)
+        lay.addWidget(self.ins_cb)
+
+    def _toggle_enabled(self, state):
+        self.cmd['enabled'] = (state == Qt.Checked)
+        self.main.log(f"Command '{self.cmd['phrase']}' {'enabled' if self.cmd['enabled'] else 'disabled'}")
+        self.main._save_commands()
+
+    def _toggle_in_sentence(self, state):
+        self.main._set_in_sentence(self.cmd, state)
