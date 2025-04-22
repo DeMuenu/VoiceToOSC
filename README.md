@@ -17,20 +17,23 @@
 
 ## 📖 About
 
-Provide a more detailed overview of the project here. Explain the problem you’re solving, why it's useful, and any background context.
+This Tool allows you to define a voice command, which you can link to multiple OSC actions. The programm allows to set bool/int/floats. For bool's you can enable a toggle mode, that flips the bool every time you speak the associated command. Right now the tool only triggers if the command is recognised as a standalone word, but there will be an option to always react to commands, even when said in a sentence.
 
 ### 🏗️ Built With
 
 - **Language/Framework:** Python 3.12
 - **Key Libraries / Tools:**
-  - [VOSK Voice Recognition](https://alphacephei.com/vosk/) – Used to dedect what you are saying
+  - [VOSK Voice Recognition](https://alphacephei.com/vosk/) – Used to detect what you are saying
 
 ## ⚙️ Installation
 
-Download the latest .exe  from [releases](https://github.com/DeMuenu/VoiceToOSC/releases) and install it to a non-admin folder. (The standart path works)
+Download the latest installer from [releases](https://github.com/DeMuenu/VoiceToOSC/releases) and install it to a non-admin folder. (The standart path works)
 
 ## 🚀 Usage
+todo
 
+If the programm crashes on startup after you changed something go into the programm folder and delete commands.json and settings.json
+The standart path is: %AppData%\Local\VoiceToOSC
 
 
 
