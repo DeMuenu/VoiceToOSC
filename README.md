@@ -17,7 +17,7 @@
 
 ## 📖 About
 
-This Tool allows you to define a voice command, which you can link to multiple OSC actions. The programm allows to set bool/int/floats. For bool's you can enable a toggle mode, that flips the bool every time you speak the associated command. Right now the tool only triggers if the command is recognised as a standalone word, but there will be an option to always react to commands, even when said in a sentence.
+This Tool allows you to define a voice command, which you can link to multiple OSC actions. The programm allows to set bool/int/floats. For bool's you can enable a toggle mode, which flips the bool every time you speak the associated command. Right now the tool only triggers if the command is recognised as a standalone word, but there will be an option in the future to always react to commands, even when recognised in a sentence.
 
 ### 🏗️ Built With
 
@@ -33,7 +33,7 @@ Download the latest installer from [releases](https://github.com/DeMuenu/VoiceTo
 todo
 
 If the programm crashes on startup after you changed something go into the programm folder and delete commands.json and settings.json
-The standart path is: %AppData%\Local\VoiceToOSC
+The standart path is: %AppData%\Local\VoiceToOSC  !!!This deletes you commands/settings!!!
 
 
 
