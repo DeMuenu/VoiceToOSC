@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QComboBox, QHeaderView, QRadioButton,
     QDialog, QDialogButtonBox, QCompleter, QCheckBox, QListWidgetItem
 )
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QDoubleValidator
 from pythonosc.dispatcher import Dispatcher
 from pythonosc import osc_server
 from osc_sender import OSCSender
@@ -360,10 +360,26 @@ class MainWindow(QMainWindow):
             self._save_commands()
 
     def delete_command(self):
-        sel=self.cmd_list.selectedItems()
-        for it in sel:
-            self.command_data=[c for c in self.command_data if not(c['phrase']==it.phrase and c['scope']==it.scope)]
-        self._populate_cmd_list(); self._save_commands()
+        sel_items = self.cmd_list.selectedItems()
+        if not sel_items:
+            return
+
+        # Build a set of (phrase, scope) tuples to delete
+        to_delete = {
+            (self.cmd_list.itemWidget(item).cmd['phrase'],
+            self.cmd_list.itemWidget(item).cmd['scope'])
+            for item in sel_items
+        }
+
+        # Filter out any commands matching those tuples
+        self.command_data = [
+            c for c in self.command_data
+            if (c['phrase'], c['scope']) not in to_delete
+        ]
+
+        # Refresh the UI and save
+        self._populate_cmd_list()
+        self._save_commands()
 
     def _on_item_toggled(self,it):
         for cmd in self.command_data:
@@ -446,7 +462,7 @@ class AddCommandDialog(QDialog):
     def __init__(self,parent=None,phrase="",actions=None,available_params=None,current_avatar=None,initial_scope='global'):
         super().__init__(parent)
         self.setWindowTitle("Command Editor")
-        self.resize(550,380)
+        self.resize(800,380)
         self.available_params=available_params or []
         self.current_avatar=current_avatar
         self.initial_scope=initial_scope
@@ -465,8 +481,8 @@ class AddCommandDialog(QDialog):
             else: self.global_rb.setChecked(True)
         else:
             self.avatar_rb.setEnabled(False); self.global_rb.setChecked(True)
-        self.actions_table = QTableWidget(0,3)
-        self.actions_table.setHorizontalHeaderLabels(["OSC Path","Value","Toggle?"])
+        self.actions_table = QTableWidget(0,4)
+        self.actions_table.setHorizontalHeaderLabels(["OSC Path","Value","Toggle?","Delay"])
         self.actions_table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
         layout.addWidget(self.actions_table)
         if actions:
@@ -475,7 +491,8 @@ class AddCommandDialog(QDialog):
                 # if this action was toggle‐only, there may be no 'value'
                 valstr = str(act.get('value','0')) 
                 toggl  = act.get('toggle', False)
-                self.add_action_row(path, valstr, toggl)
+                delay  = act.get('delay', 0)
+                self.add_action_row(path, valstr, toggl, delay)
         btns=QHBoxLayout()
         add_btn = QPushButton("Add Action") 
         add_btn.clicked.connect(lambda: self.add_action_row())
@@ -485,7 +502,7 @@ class AddCommandDialog(QDialog):
         layout.addWidget(ok_cancel)
 
 
-    def add_action_row(self, path="", value="0", toggle=False, *_args):
+    def add_action_row(self, path="", value="0", toggle=False, delay="0", *_args):
         row = self.actions_table.rowCount()
         self.actions_table.insertRow(row)
 
@@ -518,18 +535,30 @@ class AddCommandDialog(QDialog):
         val_edit.setEnabled(not toggle)
         cb.stateChanged.connect(lambda s, ve=val_edit: ve.setEnabled(s!=Qt.Checked))
 
+        # Delay editor
+        delay_item = QLineEdit(str(delay))
+        delay_item.setValidator(QDoubleValidator(0.0, 999.0, 2))  # optional: only floats
+        self.actions_table.setCellWidget(row, 3, delay_item)
+
         self.actions_table.setCellWidget(row, 2, cb)
 
     def get_result(self):
         phrase = self.phrase_edit.text().strip().lower()
         scope = 'global' if self.global_rb.isChecked() else self.current_avatar
-
+        
         actions = []
         for r in range(self.actions_table.rowCount()):
             path = self.actions_table.cellWidget(r,0).currentText().strip()
             toggle = self.actions_table.cellWidget(r,2).isChecked()
+            delay_widget = self.actions_table.cellWidget(r, 3)
+
+            try:
+                delay = float(delay_widget.text())
+            except ValueError:
+                delay = 0.0
+
             if toggle:
-                actions.append({'path': path, 'toggle': True})
+                actions.append({'path': path, 'toggle': True, 'delay':delay})
             else:
                 vs = self.actions_table.cellWidget(r,1).text().strip().lower()
                 if vs in ("true","false"):
@@ -539,7 +568,7 @@ class AddCommandDialog(QDialog):
                     except: 
                         try: v = float(vs)
                         except: v = 0
-                actions.append({'path': path, 'value': v, 'toggle': False})
+                actions.append({'path': path, 'value': v, 'toggle': False, 'delay': delay})
         return phrase, actions, scope
 
 

@@ -2,7 +2,7 @@
   "host": "127.0.0.1",
   "port": 9000,
   "in_port": 9001,
-  "device": 2,
+  "device": 0,
   "out_port": 9000,
   "model_path": "models\\vosk-model-small-en-us-0.15"
 }
