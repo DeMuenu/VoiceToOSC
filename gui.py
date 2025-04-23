@@ -4,7 +4,7 @@ import json
 import threading
 from datetime import datetime
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QSpinBox, QPushButton, QListWidget, QTextEdit,
@@ -31,12 +31,14 @@ class MainWindow(QMainWindow):
     avatarChanged = pyqtSignal(str)
     avatarLoaded  = pyqtSignal(str)
     logSignal = pyqtSignal(str)
+    scheduleOSC = pyqtSignal(str, object, float)
 
     def __init__(self):
         super().__init__()
         self.avatarChanged.connect(self._on_avatar_change_main)
         self.avatarLoaded .connect(self._on_avatar_loaded_main)
         self.logSignal.connect(self._append_log)
+        self.scheduleOSC.connect(self._on_schedule_osc)
         self.setWindowTitle("VRChat VoiceToOSC")
         self.resize(1000, 700)
         self.setStyleSheet("""
@@ -448,7 +450,20 @@ class MainWindow(QMainWindow):
                         else:
                             if (act['value'] == ""): continue
                             new_v = act['value']
-                        self.osc.send(path, new_v)
+
+                        delay_s = act.get('delay', 0) or 0
+                        self.scheduleOSC.emit(path, new_v, delay_s) 
+
+    @pyqtSlot(str, object, float)
+    def _on_schedule_osc(self, path, new_v, delay_s):
+        delay_ms = int(delay_s * 1000)
+
+        if delay_ms > 0:
+            QTimer.singleShot(delay_ms, lambda p=path, v=new_v: self.osc.send(p, v))
+            self.log(f"Scheduled {path} → {new_v} in {delay_s}s")
+        else:
+            self.osc.send(path, new_v)
+            self.log(f"Sent {path} → {new_v}")
 
     def _append_log(self, msg: str):
         t = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
