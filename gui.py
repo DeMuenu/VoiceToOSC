@@ -30,11 +30,13 @@ class CommandItem(QtWidgets.QListWidgetItem):
 class MainWindow(QMainWindow):
     avatarChanged = pyqtSignal(str)
     avatarLoaded  = pyqtSignal(str)
+    logSignal = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
         self.avatarChanged.connect(self._on_avatar_change_main)
         self.avatarLoaded .connect(self._on_avatar_loaded_main)
+        self.logSignal.connect(self._append_log)
         self.setWindowTitle("VRChat VoiceToOSC")
         self.resize(1000, 700)
         self.setStyleSheet("""
@@ -432,9 +434,13 @@ class MainWindow(QMainWindow):
                             new_v = act['value']
                         self.osc.send(path, new_v)
 
-    def log(self,msg):
-        t=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    def _append_log(self, msg: str):
+        t = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.log_widget.append(f'[{t}] {msg}')
+
+    def log(self, msg: str):
+        # this can be called from any thread
+        self.logSignal.emit(msg)
 
 class AddCommandDialog(QDialog):
     def __init__(self,parent=None,phrase="",actions=None,available_params=None,current_avatar=None,initial_scope='global'):
