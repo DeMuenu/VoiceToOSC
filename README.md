@@ -36,6 +36,7 @@ All voice recognition runs locally. With a voice recognition model by VOSK, it u
 - [ ] En/disable voice recognition via OSC-Parameter
 - [ ] Optionally listen to game sound, to allow others to control your avatar
 - [ ] Emotion detection, to be able to map emotions to facial expressions
+- [ ] Action recording
 
 ## ⚙️ Installation
 
