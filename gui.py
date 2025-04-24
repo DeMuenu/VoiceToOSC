@@ -477,7 +477,7 @@ class AddCommandDialog(QDialog):
     def __init__(self,parent=None,phrase="",actions=None,available_params=None,current_avatar=None,initial_scope='global'):
         super().__init__(parent)
         self.setWindowTitle("Command Editor")
-        self.resize(800,380)
+        self.resize(900,700)
         self.available_params=available_params or []
         self.current_avatar=current_avatar
         self.initial_scope=initial_scope
@@ -496,66 +496,110 @@ class AddCommandDialog(QDialog):
             else: self.global_rb.setChecked(True)
         else:
             self.avatar_rb.setEnabled(False); self.global_rb.setChecked(True)
-        self.actions_table = QTableWidget(0,4)
-        self.actions_table.setHorizontalHeaderLabels(["OSC Path","Value","Toggle?","Delay"])
+        self.actions_table = QTableWidget(0,5)
+        self.actions_table.setColumnHidden(4, True)
+        self.actions_table.setHorizontalHeaderLabels(["OSC Path","Value","Toggle?","Delay","action_type"])
         self.actions_table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
         layout.addWidget(self.actions_table)
+
+        #chatbox events
+        self.chatbox_table = QTableWidget(0,3)
+        self.chatbox_table.setColumnHidden(2, True)
+        self.chatbox_table.setHorizontalHeaderLabels(["Chatbox-text","Delay","action_type"])
+        self.chatbox_table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
+        layout.addWidget(self.chatbox_table)
+
+
         if actions:
             for act in actions:
                 path   = act.get('path','')
-                # if this action was toggle‐only, there may be no 'value'
-                valstr = str(act.get('value','0')) 
-                toggl  = act.get('toggle', False)
                 delay  = act.get('delay', 0)
-                self.add_action_row(path, valstr, toggl, delay)
+                action_type = act.get('action_type', "OSC")
+                # if this action was toggle‐only, there may be no 'value'
+
+                if action_type == "Chatbox":
+                    self.add_action_row(path=path, delay=str(delay), action_type=action_type)
+                else:
+                    valstr = str(act.get('value','0')) 
+                    toggl  = act.get('toggle', False)
+                    self.add_action_row(path=path, value=valstr, toggle=toggl, delay=str(delay), action_type=action_type)
+
+
         btns=QHBoxLayout()
         add_btn = QPushButton("Add Action") 
         add_btn.clicked.connect(lambda: self.add_action_row())
-        btns.addWidget(add_btn); layout.addLayout(btns)
+        btns.addWidget(add_btn)
+
+        add_ctbx_btn = QPushButton("Add Chatbox event") 
+        add_ctbx_btn.clicked.connect(lambda: self.add_action_row(action_type="Chatbox"))
+        btns.addWidget(add_ctbx_btn); layout.addLayout(btns)
+
         ok_cancel=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
         ok_cancel.accepted.connect(self.accept); ok_cancel.rejected.connect(self.reject)
         layout.addWidget(ok_cancel)
 
 
-    def add_action_row(self, path="", value="0", toggle=False, delay="0", *_args):
-        row = self.actions_table.rowCount()
-        self.actions_table.insertRow(row)
+    def add_action_row(self, path="", value="0", toggle=False, delay="0", action_type="OSC", *_args):
+        
+        if(action_type != "Chatbox"):
+            row = self.actions_table.rowCount()
+            self.actions_table.insertRow(row)
 
-        # — OSC path combo +
-        combo = QComboBox(); combo.setEditable(True)
-        combo.addItems([p['address'] for p in self.available_params])
-        combo.setCurrentText(path)
-        # substring matcher
-        comp = QCompleter([p['address'] for p in self.available_params], combo)
-        comp.setCaseSensitivity(Qt.CaseInsensitive)
-        comp.setFilterMode(Qt.MatchContains)
-        combo.setCompleter(comp)
-        self.actions_table.setCellWidget(row, 0, combo)
+            # — OSC path combo +
+            combo = QComboBox(); combo.setEditable(True)
+            combo.addItems([p['address'] for p in self.available_params])
+            combo.setCurrentText(path)
+            # substring matcher
+            comp = QCompleter([p['address'] for p in self.available_params], combo)
+            comp.setCaseSensitivity(Qt.CaseInsensitive)
+            comp.setFilterMode(Qt.MatchContains)
+            combo.setCompleter(comp)
+            self.actions_table.setCellWidget(row, 0, combo)
 
-        # — Value field
-        val_edit = QLineEdit(value)
-        self.actions_table.setCellWidget(row, 1, val_edit)
+            # — Value field
 
-        # — Toggle? checkbox (only active for Bool params)
-        cb = QCheckBox()
-        # find this path’s type
-        ptype = next((p['type'] for p in self.available_params if p['address']==path), None)
-        # Option A: wrap in bool()
-        #should_enable = toggle
-        cb.setEnabled(True)
+            val_edit = QLineEdit(value)
+            self.actions_table.setCellWidget(row, 1, val_edit)
 
-        cb.setChecked(toggle)
+            action_edit = QLineEdit(action_type)
+            self.actions_table.setCellWidget(row, 4, action_edit)
 
-        # disable the value field whenever toggle is on
-        val_edit.setEnabled(not toggle)
-        cb.stateChanged.connect(lambda s, ve=val_edit: ve.setEnabled(s!=Qt.Checked))
+            # — Toggle? checkbox (only active for Bool params)
+            cb = QCheckBox()
+            # find this path’s type
+            ptype = next((p['type'] for p in self.available_params if p['address']==path), None)
+            # Option A: wrap in bool()
+            #should_enable = toggle
+            cb.setEnabled(True)
+            val_edit.setEnabled(not toggle)
+            cb.setChecked(toggle)
 
-        # Delay editor
-        delay_item = QLineEdit(str(delay))
-        delay_item.setValidator(QDoubleValidator(0.0, 999.0, 2))  # optional: only floats
-        self.actions_table.setCellWidget(row, 3, delay_item)
+            # disable the value field whenever toggle is on
+            cb.stateChanged.connect(lambda s, ve=val_edit: ve.setEnabled(s!=Qt.Checked))
 
-        self.actions_table.setCellWidget(row, 2, cb)
+            # Delay editor
+            delay_item = QLineEdit(str(delay))
+            delay_item.setValidator(QDoubleValidator(0.0, 999.0, 2))  # optional: only floats
+            self.actions_table.setCellWidget(row, 3, delay_item)
+
+            self.actions_table.setCellWidget(row, 2, cb)
+        else:
+            row = self.chatbox_table.rowCount()
+            self.chatbox_table.insertRow(row)
+
+            # — OSC path combo +
+            combo = QComboBox(); combo.setEditable(True)
+            combo.setCurrentText(path)
+            self.chatbox_table.setCellWidget(row, 0, combo)
+
+            # Delay editor
+            delay_item = QLineEdit(str(delay))
+            delay_item.setValidator(QDoubleValidator(0.0, 999.0, 2))  # optional: only floats
+            self.chatbox_table.setCellWidget(row, 1, delay_item)
+
+            action_edit = QLineEdit(action_type)
+            self.chatbox_table.setCellWidget(row, 2, action_edit)
+
 
     def get_result(self):
         phrase = self.phrase_edit.text().strip().lower()
@@ -566,16 +610,18 @@ class AddCommandDialog(QDialog):
             path = self.actions_table.cellWidget(r,0).currentText().strip()
             toggle = self.actions_table.cellWidget(r,2).isChecked()
             delay_widget = self.actions_table.cellWidget(r, 3)
+            action_type = self.actions_table.cellWidget(r, 4).text()
 
             try:
                 delay = float(delay_widget.text())
             except ValueError:
                 delay = 0.0
 
-            if toggle:
-                actions.append({'path': path, 'toggle': True, 'delay':delay})
+            if toggle: #todo check for actiontype
+                actions.append({'path': path, 'toggle': True, 'delay':delay, 'action_type': action_type})
             else:
                 vs = self.actions_table.cellWidget(r,1).text().strip().lower()
+                
                 if vs in ("true","false"):
                     v = (vs=="true")
                 else:
@@ -583,7 +629,20 @@ class AddCommandDialog(QDialog):
                     except: 
                         try: v = float(vs)
                         except: v = 0
-                actions.append({'path': path, 'value': v, 'toggle': False, 'delay': delay})
+                
+                actions.append({'path': path, 'value': v, 'toggle': False, 'delay': delay, 'action_type': action_type})
+        for r in range(self.chatbox_table.rowCount()):
+            path = self.chatbox_table.cellWidget(r,0).currentText().strip()
+            delay_widget = self.chatbox_table.cellWidget(r, 1)
+            action_type = self.chatbox_table.cellWidget(r, 2).text()
+
+            try:
+                delay = float(delay_widget.text())
+            except ValueError:
+                delay = 0.0
+
+            actions.append({'path': path, 'delay': delay, 'action_type': action_type})
+
         return phrase, actions, scope
 
 
