@@ -17,7 +17,7 @@
 
 ## 📖 About
 
-This tool allows you to define a voice command, which you can link to multiple OSC actions. The program allows setting bool/int/floats. For bool's you can enable a toggle mode, which flips the bool every time you speak the associated command. A chatbox integration is planned as well as commands from other users.
+This tool allows you to define a voice command, which you can link to multiple OSC actions. The program allows setting bool/int/floats. For bool's you can enable a toggle mode, which flips the bool every time you speak the associated command. A chatbox integration is planned, as well as commands from other users.
 
 All voice recognition runs locally. With a voice recognition model by VOSK, it uses around 300 MB of RAM at Runtime. The Tool doesn't connect to any service except for the locally running VRChat OSC connection.
 
@@ -28,8 +28,8 @@ All voice recognition runs locally. With a voice recognition model by VOSK, it u
   - [VOSK Voice Recognition](https://alphacephei.com/vosk/) – Used to detect what you are saying
  
 ### 💡 Planned features
-- [x] In sentence recognition -> v0.2
-- [x] Delayed actions -> v0.2
+- [x] In sentence recognition → v0.2
+- [x] Delayed actions → v0.2
 - [ ] Chat box Integration
 - [ ] Modular chat box, example: "chat(trigger-word) hello there (to be written to the chat box)"
 - [ ] JSON per avatar config in/export
@@ -58,11 +58,23 @@ Get models from [VOSK models](https://alphacephei.com/vosk/models) (the sub-50M 
 
 **Input Device**, allows you to select the used microphone.
 
+
 ### Commands
 You can add/edit/delete commands with the buttons visible. A command is the word or multiple Words you want to say to trigger the assigned actions. Commands that are assigned to a specific avatar will not show up unless you wear that avatar.
 
 When creating a command, you will need to fill out the following things:
-**Voice Phrase** Will be the trigger word/sentence. Keep in mind that the voice recognition models are small and not too advanced, so try to use easy words.
+
+**Voice Phrase** Define what should trigger the command, depends on the InSentence toggle in the main menu.  
+If ***InSentence*** is disabled:
+
+If you enter "test", the command will be triggered when test is said outside a sentence. 
+You can also do "test/hat/cap enable" which will trigger the command when either "test", "hat" or "cap enable" is said.
+
+If ***InSentence*** is enabled:
+
+If you enter "enable hat", the command will be triggered when "enable" and "hat" are said in a sentence. The condition to a successful execution is that every word  split by a space is present in a sentence. You can also do "enable/spawn hat/cap" which interprets the slashes as an OR and the spaces as a AND. So it checks if ("enable" OR "spawn") AND ("hat" OR "cap") are in a sentence. 
+
+
 
 **Global/Avatar-specific** will make the command execute either always, or only when wearing the avatar you are wearing at the time of creation/editing.
 
@@ -81,5 +93,4 @@ The ***OSC Path*** is the path where your avatar stores the variable you want to
 
 If the program crashes on startup after you changed something, go into the program folder and delete commands.json and settings.json
 The standard path is: %AppData%\Local\VoiceToOSC  !!! This deletes your commands/settings !!!
-
 
