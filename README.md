@@ -17,7 +17,7 @@
 
 ## 📖 About
 
-This tool allows you to define a voice command, which you can link to multiple OSC actions. The program allows setting bool/int/floats. For bool's you can enable a toggle mode, which flips the bool every time you speak the associated command. Right now the tool only triggers if the command is recognized as a standalone word, but there will be an option in the future to always react to commands, even when recognized in a sentence.
+This tool allows you to define a voice command, which you can link to multiple OSC actions. The program allows setting bool/int/floats. For bool's you can enable a toggle mode, which flips the bool every time you speak the associated command. A chatbox integration is planned as well as commands from other users.
 
 All voice recognition runs locally. With a voice recognition model by VOSK, it uses around 300 MB of RAM at Runtime. The Tool doesn't connect to any service except for the locally running VRChat OSC connection.
 
