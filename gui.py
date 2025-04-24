@@ -441,18 +441,24 @@ class MainWindow(QMainWindow):
             if cmd['enabled'] and (cmd['scope']=='global' or cmd['scope']==self.current_avatar_id):
                 if self._match_execution_criteria(phrase, cmd['phrase'], cmd['in_sentence']):
                     for act in cmd['actions']:
-                        if (act['path'] == ""): continue
-                        path = act['path']
-                        if act.get('toggle'):
-                            # invert last‑known bool (default False)
-                            cur   = bool(self.param_values.get(path, False))
-                            new_v = not cur
-                        else:
-                            if (act['value'] == ""): continue
-                            new_v = act['value']
+                        if act['action_type'] != "Chatbox":
+                            if (act['path'] == ""): continue
+                            path = act['path']
+                            if act.get('toggle'):
+                                # invert last‑known bool (default False)
+                                cur   = bool(self.param_values.get(path, False))
+                                new_v = not cur
+                            else:
+                                if (act['value'] == ""): continue
+                                new_v = act['value']
 
-                        delay_s = act.get('delay', 0) or 0
-                        self.scheduleOSC.emit(path, new_v, delay_s) 
+                            delay_s = act.get('delay', 0) or 0
+                            self.scheduleOSC.emit(path, new_v, delay_s)
+                        else:
+                            path = act['path']
+                            delay_s = act.get('delay', 0) or 0
+                            self.scheduleOSC.emit("/chatbox/input", [path, True, False], delay_s)
+                        
 
     @pyqtSlot(str, object, float)
     def _on_schedule_osc(self, path, new_v, delay_s):
