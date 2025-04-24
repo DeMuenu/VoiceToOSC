@@ -26,6 +26,16 @@ All voice recognition runs locally. With a voice recognition model by VOSK, it u
 - **Language/Framework:** Python 3.12
 - **Key Libraries / Tools:**
   - [VOSK Voice Recognition](https://alphacephei.com/vosk/) – Used to detect what you are saying
+ 
+### 💡 Planned features
+- [x] In sentence recognition -> v0.2
+- [x] Delayed actions -> v0.2
+- [ ] Chat box Integration
+- [ ] Modular chat box, example: "chat(trigger-word) hello there (to be written to the chat box)"
+- [ ] JSON per avatar config in/export
+- [ ] en/disable voice recognition via OSC-Parameter
+- [ ] optionally listen to game sound, to allow others to control your avatar
+- [ ] emotion detection, to be able to map emotions to facial expressions
 
 ## ⚙️ Installation
 
