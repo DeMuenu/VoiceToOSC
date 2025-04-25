@@ -49,6 +49,8 @@ def is_newer(latest, current):
     b += [0] * (n - len(b))
     return a > b  # lexicographic comparison
 
+from modules.speechtotext import STT
+
 class CommandItem(QtWidgets.QListWidgetItem):
     def __init__(self, phrase, actions, enabled=True, scope='global'):
         super().__init__(phrase)
@@ -86,9 +88,11 @@ class MainWindow(QMainWindow):
         self.listening = False
         self.param_values = {}
 
+
         # Load settings & commands
         self._load_settings()
         self._load_commands()
+        self._load_module_settings()
 
         # Build UI
 
@@ -221,6 +225,12 @@ class MainWindow(QMainWindow):
         ctrl.addWidget(add_btn); ctrl.addWidget(edit_btn); ctrl.addWidget(del_btn)
         layout.addLayout(ctrl)
 
+        #features
+        modules = QHBoxLayout()
+        stt_btn = QPushButton("Speech to Chatbox"); stt_btn.clicked.connect(self.edit_stt)
+        modules.addWidget(stt_btn)
+        layout.addLayout(modules)
+
         # Log
         layout.addWidget(QLabel("Log:"))
         self.log_widget = QTextEdit(); self.log_widget.setReadOnly(True); self.log_widget.setFixedHeight(160)
@@ -258,6 +268,16 @@ class MainWindow(QMainWindow):
             self.voice.stop(); self.listening=False; self.toggle_btn.setText("Start Listening"); self.log("Voice listening stopped")
         else:
             self.voice.start(); self.listening=True; self.toggle_btn.setText("Stop Listening"); self.log("Voice listening started")
+
+    def _load_module_settings(self):
+        try:
+            with open('module_settings.json') as f: self.module_settings=json.load(f)
+        except: self.module_settings={'stt_mode':'OFF','stt_activation__phrase':'status'}
+        self.module_settings.setdefault('stt_mode', 'OFF')
+        self.module_settings.setdefault('stt_activation__phrase','status')
+
+    def _save_module_settings(self):
+        with open('module_settings.json','w') as f: json.dump(self.module_settings,f,indent=2)
 
     def _load_settings(self):
         try:
@@ -455,6 +475,13 @@ class MainWindow(QMainWindow):
         # Refresh the UI and save
         self._populate_cmd_list()
         self._save_commands()
+
+    def edit_stt(self):
+            dlg=STT(self,activation_phrase=self.module_settings['stt_activation__phrase'], activate_mode=self.module_settings['stt_mode'])
+            if dlg.exec_():
+                self.module_settings['stt_activation__phrase'], self.module_settings['stt_mode'] = dlg.getResult()
+                self.log(f"Set stt_activation__phrase to: {self.module_settings['stt_activation__phrase']}. Set stt_mode to: {self.module_settings['stt_mode']}.")
+                self._save_module_settings()
 
     def _on_item_toggled(self,it):
         for cmd in self.command_data:

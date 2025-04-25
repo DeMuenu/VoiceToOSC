@@ -4,3 +4,5 @@ __pycache__/voice.cpython-312.pyc
 /__pycache__
 /__pycache__
 commands.json
+/modules/__pycache__
+module_settings.json
