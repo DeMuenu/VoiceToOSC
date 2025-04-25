@@ -8,7 +8,7 @@ import sounddevice as sd
 from vosk import Model, KaldiRecognizer
 
 class VoiceRecognizer:
-    def __init__(self, callback, model_path="models/vosk-model-small-en-us-0.15", device=None):
+    def __init__(self, callback, partial_callback, model_path="models/vosk-model-small-en-us-0.15", device=None):
         """
         callback(phrase: str)
         """
@@ -22,6 +22,7 @@ class VoiceRecognizer:
 
 
         self.callback = callback
+        self.partial_callback = partial_callback
         self.q = queue.Queue()
         self.model = Model(model_path)
         self.recognizer = KaldiRecognizer(self.model, 16000)
@@ -56,8 +57,9 @@ class VoiceRecognizer:
                 else:
                     # Optionally print partial results
                     partial = json.loads(self.recognizer.PartialResult()).get("partial", "")
-                    #if partial:
-                        #print(f"Partial: {partial}", end="\r")  # overwrite line
+                    if partial:
+                        print(f"Partial: {partial}", end="\r")  # overwrite line
+                        self.partial_callback(partial)
 
         print("VoiceRecognizer stopped listening")  # notify stop
 

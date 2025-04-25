@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
 
         # OSC sender & voice
         self.osc = OSCSender(self.settings['host'], self.settings['out_port'])
-        self.voice = VoiceRecognizer(self.on_phrase_detected, model_path=self.settings['model_path'], device=self.settings.get('device'))
+        self.voice = VoiceRecognizer(self.on_phrase_detected, self.on_partial_phrase_dedected, model_path=self.settings['model_path'], device=self.settings.get('device'))
 
         # Start OSC listener
         self._start_osc_listener()
@@ -272,9 +272,10 @@ class MainWindow(QMainWindow):
     def _load_module_settings(self):
         try:
             with open('module_settings.json') as f: self.module_settings=json.load(f)
-        except: self.module_settings={'stt_mode':'OFF','stt_activation__phrase':'status'}
+        except: self.module_settings={'stt_mode':'OFF','stt_activation__phrase':'status', 'send_confirm': 'NORMAL'}
         self.module_settings.setdefault('stt_mode', 'OFF')
         self.module_settings.setdefault('stt_activation__phrase','status')
+        self.module_settings.setdefault('send_confirm','NORMAL') #NORMAL, CONFIRM, LIVE
 
     def _save_module_settings(self):
         with open('module_settings.json','w') as f: json.dump(self.module_settings,f,indent=2)
@@ -295,7 +296,7 @@ class MainWindow(QMainWindow):
         
         if self.listening:
             self.voice.stop()
-        self.voice = VoiceRecognizer(self.on_phrase_detected, model_path=self.settings['model_path'], device=self.settings['device'])
+        self.voice = VoiceRecognizer(self.on_phrase_detected, self.on_partial_phrase_dedected, model_path=self.settings['model_path'], device=self.settings['device'])
         if self.listening:
             self.voice.start()
 
@@ -477,10 +478,10 @@ class MainWindow(QMainWindow):
         self._save_commands()
 
     def edit_stt(self):
-            dlg=STT(self,activation_phrase=self.module_settings['stt_activation__phrase'], activate_mode=self.module_settings['stt_mode'])
+            dlg=STT(self,activation_phrase=self.module_settings['stt_activation__phrase'], activate_mode=self.module_settings['stt_mode'], confirm_mode=self.module_settings['send_confirm'])
             if dlg.exec_():
-                self.module_settings['stt_activation__phrase'], self.module_settings['stt_mode'] = dlg.getResult()
-                self.log(f"Set stt_activation__phrase to: {self.module_settings['stt_activation__phrase']}. Set stt_mode to: {self.module_settings['stt_mode']}.")
+                self.module_settings['stt_activation__phrase'], self.module_settings['stt_mode'], self.module_settings['send_confirm'] = dlg.getResult()
+                self.log(f"Set stt_activation__phrase to: {self.module_settings['stt_activation__phrase']}. Set stt_mode to: {self.module_settings['stt_mode']}. Set send_confirm to: {self.module_settings['send_confirm']}.")
                 self._save_module_settings()
 
     def _on_item_toggled(self,it):
@@ -557,8 +558,36 @@ class MainWindow(QMainWindow):
                         else:
                             path = act['path']
                             delay_s = act.get('delay', 0) or 0
-                            self.scheduleOSC.emit("/chatbox/input", [path, True, False], delay_s)
-                        
+                            self.scheduleOSC.emit("/chatbox/input", [path, True, True], delay_s)
+        #stt
+        #self.log(f"mode {self.module_settings['stt_mode']} confirm: {self.module_settings['send_confirm']}")
+
+        if self.module_settings['stt_mode'] == 'ON':
+            if (self.module_settings['send_confirm'] == 'NORMAL' or self.module_settings['send_confirm'] == 'LIVE'):
+                self.scheduleOSC.emit("/chatbox/input", [phrase, True, True], 0)
+            if self.module_settings['send_confirm'] == 'CONFIRM':
+                self.scheduleOSC.emit("/chatbox/input", [phrase, False, True], 0)
+            
+        elif self.module_settings['stt_mode'] == 'TRIGGER':
+            if self.module_settings['stt_activation__phrase'] in phrase:
+                preChatboxActivation, postChatboxActivation = phrase.split(self.module_settings['stt_activation__phrase'], 1)
+                if (self.module_settings['send_confirm'] == 'NORMAL' or self.module_settings['send_confirm'] == 'LIVE'):
+                    self.scheduleOSC.emit("/chatbox/input", [postChatboxActivation, True, True], 0)
+                if self.module_settings['send_confirm'] == 'CONFIRM':
+                    self.scheduleOSC.emit("/chatbox/input", [postChatboxActivation, False, True], 0)
+                
+
+    def on_partial_phrase_dedected(self,phrase):
+        if self.module_settings['stt_mode'] == 'ON':
+            if (self.module_settings['send_confirm'] == 'LIVE'):
+                self.scheduleOSC.emit("/chatbox/input", [phrase, True, True], 0)
+            
+        elif self.module_settings['stt_mode'] == 'TRIGGER':
+            if self.module_settings['stt_activation__phrase'] in phrase:
+                preChatboxActivation, postChatboxActivation = phrase.split(self.module_settings['stt_activation__phrase'], 1)
+                if (self.module_settings['send_confirm'] == 'LIVE'):
+                    self.scheduleOSC.emit("/chatbox/input", [postChatboxActivation, True, True], 0)
+
 
     @pyqtSlot(str, object, float)
     def _on_schedule_osc(self, path, new_v, delay_s):
