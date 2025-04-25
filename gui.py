@@ -4,19 +4,50 @@ import json
 import threading
 from datetime import datetime
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QUrl
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QSpinBox, QPushButton, QListWidget, QTextEdit,
     QTableWidget, QTableWidgetItem, QComboBox, QHeaderView, QRadioButton,
-    QDialog, QDialogButtonBox, QCompleter, QCheckBox, QListWidgetItem
+    QDialog, QDialogButtonBox, QCompleter, QCheckBox, QListWidgetItem, QMessageBox
 )
-from PyQt5.QtGui import QFont, QDoubleValidator
+from PyQt5.QtGui import QFont, QDoubleValidator, QDesktopServices
 from pythonosc.dispatcher import Dispatcher
 from pythonosc import osc_server
 from osc_sender import OSCSender
 from voice import VoiceRecognizer
 import sounddevice as sd
+import urllib.request
+
+GITHUB_API_LATEST = "https://api.github.com/repos/DeMuenu/VoiceToOSC/releases/latest"
+CURRENT_VERSION = "0.0.3"
+CHECK_DELAY_MS   = 1000
+
+
+
+def parse_version(v):
+    parts = []
+    for part in v.split('.'):
+        num = ''
+        for ch in part:
+            if ch.isdigit():
+                num += ch
+            else:
+                break
+        if num:
+            parts.append(int(num))
+        else:
+            parts.append(0)
+    return parts
+
+def is_newer(latest, current):
+    a = parse_version(latest)
+    b = parse_version(current)
+    # pad the shorter list
+    n = max(len(a), len(b))
+    a += [0] * (n - len(a))
+    b += [0] * (n - len(b))
+    return a > b  # lexicographic comparison
 
 class CommandItem(QtWidgets.QListWidgetItem):
     def __init__(self, phrase, actions, enabled=True, scope='global'):
@@ -63,6 +94,10 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
 
+
+        #check for app updates
+        QTimer.singleShot(CHECK_DELAY_MS, self.check_for_updates)
+
         # OSC sender & voice
         self.osc = OSCSender(self.settings['host'], self.settings['out_port'])
         self.voice = VoiceRecognizer(self.on_phrase_detected, model_path=self.settings['model_path'], device=self.settings.get('device'))
@@ -70,6 +105,44 @@ class MainWindow(QMainWindow):
         # Start OSC listener
         self._start_osc_listener()
         self.toggle_listening()
+
+    def check_for_updates(self):
+        req = urllib.request.Request(
+        GITHUB_API_LATEST,
+        headers={"User-Agent": "VoiceUpdater/1.0"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            # silently ignore or log
+            print(f"Update check failed: {e}")
+            return
+
+        tag = data.get("tag_name", "")
+        latest = tag.lstrip("v")  # e.g. "v1.2.3" → "1.2.3"
+        if is_newer(latest, CURRENT_VERSION):
+            notes  = data.get("body", "").strip()
+            assets = data.get("assets", [])
+            download_url = data.get("html_url")  # fallback
+            for asset in assets:
+                name = asset.get("name", "")
+                if name.endswith(".exe") or name.endswith(".msi"):
+                    download_url = asset["browser_download_url"]
+                    break
+            self.prompt_update(tag, notes, download_url)
+
+    def prompt_update(self, tag, notes, url):
+        html_notes = notes.replace('\n', '<br>')
+        msg = (f"A new version <b>{tag}</b> is available!<br><br>"
+               f"<b>Release notes:</b><br>{html_notes[:500]}…<br><br>"
+               f"Would you like to update?")
+        reply = QMessageBox.question(
+            self, "Update Available", msg,
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
+        )
+        if reply == QMessageBox.Yes:
+            QDesktopServices.openUrl(QUrl(url))
 
 
     def _emit_avatar_changed(self, addr, avatar_id):
