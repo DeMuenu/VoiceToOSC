@@ -48,3 +48,7 @@ To update the program, just install the new version into the same folder (I'd re
 You need to turn on OSC in the Action Menu under OSC > Enabled.
 
 To see how to configure Commands and TextToChatbox, see the [wiki](https://github.com/DeMuenu/VoiceToOSC/wiki).
+
+
+## Support 
+If something is broken please submit a bug report here [Bug Report](https://github.com/DeMuenu/VoiceToOSC/issues/new?labels=bug&template=bug-report.md) or send me a message on Discord @demuenu
