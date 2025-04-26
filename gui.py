@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
         self.current_avatar_id = None
         self.listening = False
         self.param_values = {}
+        self.lastChatboxmessage = ''
 
 
         # Load settings & commands
@@ -516,7 +517,9 @@ class MainWindow(QMainWindow):
             match_count = 0
             phrase_words = phrase_F.split(" ")
             cmd_words = cmd_phrase.split(" ")
+            cmd_length = len(cmd_words)
             for word in phrase_words:
+                
                 for cmds in cmd_words:
                     if "/" in cmds:
                         cmd_single = cmds.split("/")
@@ -524,16 +527,21 @@ class MainWindow(QMainWindow):
                             self.log("Check2: " + cmd_single_word + " == " + word)
                             if cmd_single_word == word:
                                 match_count += 1
+                                cmd_words.remove(cmds)
                                 break
                     else:
                         self.log("Check3: " + cmds + " == " + word)
                         if cmds == word:
                             match_count += 1
-            if match_count >= len(cmd_words):
-                self.log("Matches sentence")
+                            cmd_words.remove(cmds)
+
+                    
+                    
+            if match_count >= cmd_length:
+                self.log(f"Matches sentence. Got {match_count} out of {cmd_length} matches")
                 return True
             else:
-                self.log("Doesn't match sentence")
+                self.log(f"Doesn't match sentence. Got {match_count} out of {cmd_length} matches")
                 return False
 
     def on_phrase_detected(self,phrase):
@@ -565,6 +573,7 @@ class MainWindow(QMainWindow):
         if self.module_settings['stt_mode'] == 'ON':
             if (self.module_settings['send_confirm'] == 'NORMAL' or self.module_settings['send_confirm'] == 'LIVE'):
                 self.scheduleOSC.emit("/chatbox/input", [phrase, True, True], 0)
+                self.lastChatboxmessage = ''
             if self.module_settings['send_confirm'] == 'CONFIRM':
                 self.scheduleOSC.emit("/chatbox/input", [phrase, False, True], 0)
             
@@ -573,20 +582,24 @@ class MainWindow(QMainWindow):
                 preChatboxActivation, postChatboxActivation = phrase.split(self.module_settings['stt_activation__phrase'], 1)
                 if (self.module_settings['send_confirm'] == 'NORMAL' or self.module_settings['send_confirm'] == 'LIVE'):
                     self.scheduleOSC.emit("/chatbox/input", [postChatboxActivation, True, True], 0)
+                    self.lastChatboxmessage = ''
                 if self.module_settings['send_confirm'] == 'CONFIRM':
                     self.scheduleOSC.emit("/chatbox/input", [postChatboxActivation, False, True], 0)
                 
 
     def on_partial_phrase_dedected(self,phrase):
-        if self.module_settings['stt_mode'] == 'ON':
-            if (self.module_settings['send_confirm'] == 'LIVE'):
-                self.scheduleOSC.emit("/chatbox/input", [phrase, True, True], 0)
-            
-        elif self.module_settings['stt_mode'] == 'TRIGGER':
-            if self.module_settings['stt_activation__phrase'] in phrase:
-                preChatboxActivation, postChatboxActivation = phrase.split(self.module_settings['stt_activation__phrase'], 1)
+        if len(self.lastChatboxmessage) + 25 <= len(phrase):
+            if self.module_settings['stt_mode'] == 'ON':
                 if (self.module_settings['send_confirm'] == 'LIVE'):
-                    self.scheduleOSC.emit("/chatbox/input", [postChatboxActivation, True, True], 0)
+                    self.scheduleOSC.emit("/chatbox/input", [phrase, True, False], 0)
+                    self.lastChatboxmessage = phrase
+                
+            elif self.module_settings['stt_mode'] == 'TRIGGER':
+                if self.module_settings['stt_activation__phrase'] in phrase:
+                    preChatboxActivation, postChatboxActivation = phrase.split(self.module_settings['stt_activation__phrase'], 1)
+                    if (self.module_settings['send_confirm'] == 'LIVE'):
+                        self.scheduleOSC.emit("/chatbox/input", [postChatboxActivation, True, False], 0)
+                        self.lastChatboxmessage = phrase
 
 
     @pyqtSlot(str, object, float)

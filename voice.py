@@ -4,6 +4,7 @@ import queue
 import json
 import sys
 import os
+import gc
 import sounddevice as sd
 from vosk import Model, KaldiRecognizer
 
@@ -69,6 +70,8 @@ class VoiceRecognizer:
         self.thread.start()
 
     def stop(self):
+        del self.model; gc.collect()
         self._stop_event.set()
         self.thread.join()
+        gc.collect()
         print("VoiceRecognizer thread joined")  # final join message
