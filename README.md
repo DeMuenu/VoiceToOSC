@@ -32,6 +32,8 @@ All voice recognition runs locally. With a voice recognition model by VOSK, it u
 - [x] Delayed actions → v0.0.2
 - [x] Chat box Integration → v0.0.3
 - [x] Modular chat box, example: "chat(trigger-word) hello there (to be written to the chat box)" → v0.0.3
+- [ ] A local TTS (text to speech) model.
+- [ ] STTTS (speech to text to speech)
 - [ ] JSON per avatar config in/export
 - [ ] En/disable voice recognition via OSC-Parameter
 - [ ] Optionally listen to game sound, to allow others to control your avatar
