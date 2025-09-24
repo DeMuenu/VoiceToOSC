@@ -21,6 +21,10 @@ This tool allows you to define a voice command, which you can link to multiple O
 
 All voice recognition runs locally. With a voice recognition model by VOSK, it uses around 300 MB of RAM at Runtime. The Tool doesn't connect to any service except for the locally running VRChat OSC connection and a update check when starting the programm.
 
+## 🛑 Discontinued
+
+I've lost motivation to work on this project, so don't expect any updates😑
+
 ### 🏗️ Built With
 
 - **Language/Framework:** Python 3.13
